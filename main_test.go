@@ -93,6 +93,8 @@ func TestSendLog(t *testing.T) {
 }
 
 func TestExecuteHandler(t *testing.T) {
+	plugin.MetricDimensions = `hey=now,this=that`
+	plugin.MetricMetadata = `you=me,here=there`
 	event := corev2.FixtureEvent("entity1", "check1")
 	event.Check = nil
 	event.Metrics = corev2.FixtureMetrics()
@@ -112,6 +114,8 @@ func TestExecuteHandler(t *testing.T) {
 			// recieved metrics with Content-Type header set
 			expectedBody := msTime
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
+			assert.Equal(t, plugin.MetricDimensions, r.Header["X-Sumo-Dimensions"][0])
+			assert.Equal(t, plugin.MetricMetadata, r.Header["X-Sumo-Metadata"][0])
 		} else {
 			// recieved log with Content-Type header unset
 			expectedBody := string(msgBytes)
