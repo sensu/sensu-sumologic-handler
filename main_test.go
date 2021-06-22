@@ -95,6 +95,11 @@ func TestSendLog(t *testing.T) {
 func TestExecuteHandler(t *testing.T) {
 	plugin.MetricDimensions = `hey=now,this=that`
 	plugin.MetricMetadata = `you=me,here=there`
+	plugin.LogFields = `near=far,in=out`
+	plugin.SourceName = `custom_source`
+	plugin.SourceHost = `custom_host`
+	plugin.SourceCategory = `custom_cat`
+
 	event := corev2.FixtureEvent("entity1", "check1")
 	event.Check = nil
 	event.Metrics = corev2.FixtureMetrics()
@@ -120,7 +125,11 @@ func TestExecuteHandler(t *testing.T) {
 			// recieved log with Content-Type header unset
 			expectedBody := string(msgBytes)
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
+			assert.Equal(t, plugin.LogFields, r.Header["X-Sumo-Fields"][0])
 		}
+		assert.Equal(t, plugin.SourceName, r.Header["X-Sumo-Name"][0])
+		assert.Equal(t, plugin.SourceHost, r.Header["X-Sumo-Host"][0])
+		assert.Equal(t, plugin.SourceCategory, r.Header["X-Sumo-Category"][0])
 		w.WriteHeader(http.StatusOK)
 	}))
 
