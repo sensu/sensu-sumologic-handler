@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,12 +21,14 @@ type Config struct {
 	Url              string
 	Verbose          bool
 	DryRun           bool
+	AlwaysSendLog    bool
 	Format           string
 	SourceName       string
 	SourceHost       string
 	SourceCategory   string
 	MetricDimensions string
 	MetricMetadata   string
+	LogFields        string
 }
 
 var (
@@ -73,6 +76,14 @@ var (
 			Value:     &plugin.DryRun,
 		},
 		&sensu.PluginConfigOption{
+			Path:      "always-send-log",
+			Argument:  "always-send-log",
+			Shorthand: "a",
+			Default:   false,
+			Usage:     "Always send event as log, even if metrics are present",
+			Value:     &plugin.AlwaysSendLog,
+		},
+		&sensu.PluginConfigOption{
 			Path:     "source-name",
 			Env:      "SUMOLOGIC_SOURCE_NAME",
 			Argument: "source-name",
@@ -112,6 +123,14 @@ var (
 			Usage:    "Custom Sumologic metric metadata (comma separate key=value)",
 			Value:    &plugin.MetricMetadata,
 		},
+		&sensu.PluginConfigOption{
+			Path:     "log-fields",
+			Env:      "SUMOLOGIC_LOG_FIELDS",
+			Argument: "log-fields",
+			Default:  "",
+			Usage:    "Custom Sumologic log fields (comma separate key=value)",
+			Value:    &plugin.LogFields,
+		},
 	}
 )
 
@@ -134,17 +153,36 @@ func checkArgs(_ *types.Event) error {
 }
 
 func executeHandler(event *types.Event) error {
+
 	dataString, err := convertMetrics(event)
 	if err != nil {
 		return err
 	}
+	doMetrics := len(dataString) > 0
+	doLog := plugin.AlwaysSendLog || len(dataString) == 0
 	if plugin.Verbose {
-		log.Printf("Metrics Output Format: %s\n%s", plugin.Format, dataString)
+		log.Printf("Metrics Output Format: %s Send Metrics: %v Send Log: %v",
+			plugin.Format, doMetrics, doLog)
 	}
-	err = sendMetrics(dataString)
-	if err != nil {
-		return err
+
+	if doMetrics {
+		err = sendMetrics(dataString)
+		if err != nil {
+			return err
+		}
 	}
+
+	if doLog {
+		msgBytes, err := json.Marshal(event)
+		if err != nil {
+			return err
+		}
+		err = sendLog(string(msgBytes))
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -204,18 +242,56 @@ func sendMetrics(dataString string) error {
 	// If DryRun report back request details
 	if plugin.DryRun {
 		bytes, _ := ioutil.ReadAll(req.Body)
-		fmt.Printf("Dry Run Request:  \n Method: %v Url: %v\n Headers: %+v\n Data:\n%v\n",
+		fmt.Printf("Dry Run Metric Request:  \n Method: %v Url: %v\n Headers: %+v\n Data:\n%v\n",
 			req.Method, req.URL, req.Header, string(bytes))
 		return nil
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Post to %s failed: %s", plugin.Url, err)
+		return fmt.Errorf("POST metrics to %s failed: %s", plugin.Url, err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("POST to %s failed with status %v", plugin.Url, resp.Status)
+		return fmt.Errorf("POST metrics to %s failed with status %v", plugin.Url, resp.Status)
+	}
+
+	defer resp.Body.Close()
+
+	return nil
+}
+func sendLog(dataString string) error {
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", plugin.Url, bytes.NewBufferString(dataString))
+	// Add optional headers here
+	if len(plugin.SourceHost) > 0 {
+		req.Header.Add(`X-Sumo-Host`, plugin.SourceHost)
+	}
+	if len(plugin.SourceName) > 0 {
+		req.Header.Add(`X-Sumo-Name`, plugin.SourceName)
+	}
+	if len(plugin.SourceCategory) > 0 {
+		req.Header.Add(`X-Sumo-Category`, plugin.SourceCategory)
+	}
+	if len(plugin.LogFields) > 0 {
+		req.Header.Add(`X-Sumo-Fields`, plugin.LogFields)
+	}
+
+	// If DryRun report back request details
+	if plugin.DryRun {
+		bytes, _ := ioutil.ReadAll(req.Body)
+		fmt.Printf("Dry Run Log Request:  \n Method: %v Url: %v\n Headers: %+v\n Data:\n%v\n",
+			req.Method, req.URL, req.Header, string(bytes))
+		return nil
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("POST log to %s failed: %s", plugin.Url, err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("POST log to %s failed with status %v", plugin.Url, resp.Status)
 	}
 
 	defer resp.Body.Close()
