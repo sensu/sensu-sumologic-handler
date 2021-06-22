@@ -260,7 +260,7 @@ func sendMetrics(dataString string) error {
 		req.Header.Add(`X-Sumo-Dimensions`, plugin.MetricDimensions)
 	}
 	if len(plugin.MetricMetadata) > 0 {
-		req.Header.Add(`X-Sumo-Metdata`, plugin.MetricMetadata)
+		req.Header.Add(`X-Sumo-Metadata`, plugin.MetricMetadata)
 	}
 
 	// If DryRun report back request details
