@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
@@ -14,10 +17,15 @@ import (
 // Config represents the handler plugin config.
 type Config struct {
 	sensu.PluginConfig
-	Url     string
-	Verbose bool
-	DryRun  bool
-	Format  string
+	Url              string
+	Verbose          bool
+	DryRun           bool
+	Format           string
+	SourceName       string
+	SourceHost       string
+	SourceCategory   string
+	MetricDimensions string
+	MetricMetadata   string
 }
 
 var (
@@ -64,6 +72,46 @@ var (
 			Usage:     "Dry-run, do not send data to Sumologic collector, report to stdout instead",
 			Value:     &plugin.DryRun,
 		},
+		&sensu.PluginConfigOption{
+			Path:     "source-name",
+			Env:      "SUMOLOGIC_SOURCE_NAME",
+			Argument: "source-name",
+			Default:  "",
+			Usage:    "Custom Sumologic source name",
+			Value:    &plugin.SourceName,
+		},
+		&sensu.PluginConfigOption{
+			Path:     "source-host",
+			Env:      "SUMOLOGIC_SOURCE_HOST",
+			Argument: "source-host",
+			Default:  "",
+			Usage:    "Custom Sumologic source host",
+			Value:    &plugin.SourceHost,
+		},
+		&sensu.PluginConfigOption{
+			Path:     "source-category",
+			Env:      "SUMOLOGIC_SOURCE_CATEGORY",
+			Argument: "source-category",
+			Default:  "",
+			Usage:    "Custom Sumologic source category",
+			Value:    &plugin.SourceCategory,
+		},
+		&sensu.PluginConfigOption{
+			Path:     "metric-dimensions",
+			Env:      "SUMOLOGIC_METRIC_DIMENSIONS",
+			Argument: "metric-dimensions",
+			Default:  "",
+			Usage:    "Custom Sumologic metric dimensions (comma separate key=value)",
+			Value:    &plugin.MetricDimensions,
+		},
+		&sensu.PluginConfigOption{
+			Path:     "metric-metadata",
+			Env:      "SUMOLOGIC_METRIC_METADATA",
+			Argument: "metric-metadata",
+			Default:  "",
+			Usage:    "Custom Sumologic metric metadata (comma separate key=value)",
+			Value:    &plugin.MetricMetadata,
+		},
 	}
 )
 
@@ -93,11 +141,9 @@ func executeHandler(event *types.Event) error {
 	if plugin.Verbose {
 		log.Printf("Metrics Output Format: %s\n%s", plugin.Format, dataString)
 	}
-	if !plugin.DryRun {
-		err = sendMetrics(dataString)
-		if err != nil {
-			return err
-		}
+	err = sendMetrics(dataString)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -135,5 +181,44 @@ func convertMetrics(event *corev2.Event) (string, error) {
 }
 
 func sendMetrics(dataString string) error {
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", plugin.Url, bytes.NewBufferString(dataString))
+	req.Header.Add(`Content-Type`, "application/vnd.sumologic."+plugin.Format)
+	// Add optional headers here
+	if len(plugin.SourceHost) > 0 {
+		req.Header.Add(`X-Sumo-Host`, plugin.SourceHost)
+	}
+	if len(plugin.SourceName) > 0 {
+		req.Header.Add(`X-Sumo-Name`, plugin.SourceName)
+	}
+	if len(plugin.SourceCategory) > 0 {
+		req.Header.Add(`X-Sumo-Category`, plugin.SourceCategory)
+	}
+	if len(plugin.MetricDimensions) > 0 {
+		req.Header.Add(`X-Sumo-Dimensions`, plugin.MetricDimensions)
+	}
+	if len(plugin.MetricMetadata) > 0 {
+		req.Header.Add(`X-Sumo-Metdata`, plugin.MetricMetadata)
+	}
+
+	// If DryRun report back request details
+	if plugin.DryRun {
+		bytes, _ := ioutil.ReadAll(req.Body)
+		fmt.Printf("Dry Run Request:  \n Method: %v Url: %v\n Headers: %+v\n Data:\n%v\n",
+			req.Method, req.URL, req.Header, string(bytes))
+		return nil
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Post to %s failed: %s", plugin.Url, err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("POST to %s failed with status %v", plugin.Url, resp.Status)
+	}
+
+	defer resp.Body.Close()
+
 	return nil
 }
