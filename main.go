@@ -18,17 +18,19 @@ import (
 // Config represents the handler plugin config.
 type Config struct {
 	sensu.PluginConfig
-	Url              string
-	Verbose          bool
-	DryRun           bool
-	AlwaysSendLog    bool
-	Format           string
-	SourceName       string
-	SourceHost       string
-	SourceCategory   string
-	MetricDimensions string
-	MetricMetadata   string
-	LogFields        string
+	Url                string
+	Verbose            bool
+	DryRun             bool
+	AlwaysSendLog      bool
+	DisableSendLog     bool
+	DisableSendMetrics bool
+	Format             string
+	SourceName         string
+	SourceHost         string
+	SourceCategory     string
+	MetricDimensions   string
+	MetricMetadata     string
+	LogFields          string
 }
 
 var (
@@ -82,6 +84,22 @@ var (
 			Default:   false,
 			Usage:     "Always send event as log, even if metrics are present",
 			Value:     &plugin.AlwaysSendLog,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "disable-send-log",
+			Argument:  "disable-send-log",
+			Shorthand: "",
+			Default:   false,
+			Usage:     "Disable send event as log",
+			Value:     &plugin.DisableSendLog,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "disable-send-metrics",
+			Argument:  "disable-send-metrics",
+			Shorthand: "",
+			Default:   false,
+			Usage:     "Disable send event metrics",
+			Value:     &plugin.DisableSendMetrics,
 		},
 		&sensu.PluginConfigOption{
 			Path:     "source-name",
@@ -159,7 +177,13 @@ func executeHandler(event *types.Event) error {
 		return err
 	}
 	doMetrics := len(dataString) > 0
+	if plugin.DisableSendMetrics {
+		doMetrics = false
+	}
 	doLog := plugin.AlwaysSendLog || len(dataString) == 0
+	if plugin.DisableSendLog {
+		doLog = false
+	}
 	if plugin.Verbose {
 		log.Printf("Metrics Output Format: %s Send Metrics: %v Send Log: %v",
 			plugin.Format, doMetrics, doLog)
