@@ -3,54 +3,108 @@
 [![Go Test](https://github.com/sensu/sensu-sumologic-handler/workflows/Go%20Test/badge.svg)](https://github.com/sensu/sensu-sumologic-handler/actions?query=workflow%3A%22Go+Test%22)
 [![goreleaser](https://github.com/sensu/sensu-sumologic-handler/workflows/goreleaser/badge.svg)](https://github.com/sensu/sensu-sumologic-handler/actions?query=workflow%3Agoreleaser)
 
-# Handler Plugin Template
-
-## Overview
-handler-plugin-template is a template repository which wraps the [Sensu Plugin SDK][2].
-To use this project as a template, click the "Use this template" button from the main project page.
-Once the repository is created from this template, you can use the [Sensu Plugin Tool][9] to
-populate the templated fields with the proper values.
-
-## Functionality
-
-After successfully creating a project from this template, update the `Config` struct with any
-configuration options for the plugin, map those values as plugin options in the variable `options`,
-and customize the `checkArgs` and `executeHandler` functions in [main.go][7].
-
-When writing or updating a plugin's README from this template, review the Sensu Community
-[plugin README style guide][3] for content suggestions and guidance. Remove everything
-prior to `# Sensu Sumologic Handler` from the generated README file, and add additional context about the
-plugin per the style guide.
-
-## Releases with Github Actions
-
-To release a version of your project, simply tag the target sha with a semver release without a `v`
-prefix (ex. `1.0.0`). This will trigger the [GitHub action][5] workflow to [build and release][4]
-the plugin with goreleaser. Register the asset with [Bonsai][8] to share it with the community!
-
-***
 
 # Sensu Sumologic Handler
 
 ## Table of Contents
 - [Overview](#overview)
-- [Files](#files)
 - [Usage examples](#usage-examples)
+  - [Help output](#help-output)
+  - [Environment variables](#environment-variables)
+  - [Annotations](#annotations)
 - [Configuration](#configuration)
   - [Asset registration](#asset-registration)
   - [Handler definition](#handler-definition)
-  - [Annotations](#annotations)
 - [Installation from source](#installation-from-source)
 - [Additional notes](#additional-notes)
 - [Contributing](#contributing)
 
 ## Overview
 
-The Sensu Sumologic Handler is a [Sensu Handler][6] that ...
-
-## Files
+The Sensu Sumologic Handler is a [Sensu Handler][6] that will let you send Sensu events and/or Sensu metrics to a a hosted Sumologic http source.
 
 ## Usage examples
+### Help output
+
+```
+Send Sensu metrics into a hosted Sumologic HTTP collector
+
+Usage:
+  sensu-sumologic-handler [flags]
+  sensu-sumologic-handler [command]
+
+Available Commands:
+  help        Help about any command
+  version     Print the version number of this plugin
+
+Flags:
+  -u, --url string                 Http collector url
+  -a, --always-send-log            Always send event as log, even if metrics are present
+  -m, --metrics-format string      Metrics format (only prometheus supported for now) (default "prometheus")
+      --disable-send-log           Disable send event as log
+      --disable-send-metrics       Disable send event metrics
+      --log-fields string          Custom Sumologic log fields (comma separate key=value)
+      --metric-dimensions string   Custom Sumologic metric dimensions (comma separate key=value)
+      --metric-metadata string     Custom Sumologic metric metadata (comma separate key=value)
+      --source-category string     Custom Sumologic source category
+      --source-host string         Custom Sumologic source host
+      --source-name string         Custom Sumologic source name
+  -n, --dry-run                    Dry-run, do not send data to Sumologic collector, report to stdout instead
+  -v, --verbose                    Verbose output to stdout
+  -h, --help                       help for sensu-sumologic-handler
+
+Use "sensu-sumologic-handler [command] --help" for more information about a command.
+```
+### Environment variables
+
+|Argument             |Environment Variable         |
+|---------------------|-----------------------------|
+|--url                |SUMOLOGIC_URL                |
+|--metrics-format     |SUMOLOGIC_METRICS_FORMAT     |
+|--source-name        |SUMOLOGIC_SOURCE_NAME        |
+|--source-host        |SUMOLOGIC_SOURCE_HOST        |
+|--source-category    |SUMOLOGIC_SOURCE_CATEGORY    |
+|--metric-dimensions  |SUMOLOGIC_METRIC_DIMENSIONS  |
+|--metric-metadata    |SUMOLOGIC_METRIC_METADATA    |
+|--log-fields         |SUMOLOGIC_LOG_FIELDS         |
+
+**Security Note:** Care should be taken to not expose the `--url` for this handler by specifying it
+on the command line or by directly setting the environment variable in the handler definition.  It is
+suggested to make use of [secrets management][7] to surface it as an environment variable.  The
+handler definition below references it as a secret. Here is corresponding secret definition that make
+use of the built-in [env secrets provider][8].
+
+```yml
+---
+type: Secret
+api_version: secrets/v1
+metadata:
+  name: sumologic_url
+spec:
+  provider: env
+  id: SUMOLOGIC_URL
+```
+
+### Annotations
+
+All of the command line arguments referenced in the help usage message can be overridden by check or entity annotations.
+The annotation consists of the key formed by appending the "long" argument specification
+to the string `sensu.io/plugins/sumologic/config` (e.g. `sensu.io/plugins/sumologic/config/source-name`).
+
+For example, having the following in an agent.yml file will create an entity annotation
+such that Sensu metrics sent to SumoLogic from this entity will include additional metadata string `environment=production, entity=test`
+instead of the metadata string defined with the handler command flag.
+
+```yml
+namespace: "default"
+subscriptions:
+  - linux
+backend-url:
+  - "ws://127.0.0.1:8081"
+annotations:
+  sensu.io/plugins/sumologic/config/metric-metadata: "environment=production, entity=test"
+```
+
 
 ## Configuration
 
@@ -76,10 +130,13 @@ metadata:
   name: sensu-sumologic-handler
   namespace: default
 spec:
-  command: sensu-sumologic-handler --example example_arg
+  command: sensu-sumologic-handler --url http://example.sumologic.com/XXXXXXXXX/XXXXXXXXX
   type: pipe
   runtime_assets:
   - sensu/sensu-sumologic-handler
+  secrets:
+  - name: SUMOLOGIC_URL
+    secret: sumologic_url
 ```
 
 #### Proxy Support
@@ -89,23 +146,6 @@ HTTPS_PROXY, and NO_PROXY (or the lowercase versions thereof). HTTPS_PROXY takes
 precedence over HTTP_PROXY for https requests.  The environment values may be
 either a complete URL or a "host[:port]", in which case the "http" scheme is assumed.
 
-### Annotations
-
-All arguments for this handler are tunable on a per entity or check basis based on annotations.  The
-annotations keyspace for this handler is `sensu.io/plugins/sensu-sumologic-handler/config`.
-
-#### Examples
-
-To change the example argument for a particular check, for that checks's metadata add the following:
-
-```yml
-type: CheckConfig
-api_version: core/v2
-metadata:
-  annotations:
-    sensu.io/plugins/sensu-sumologic-handler/config/example-argument: "Example change"
-[...]
-```
 
 ## Installation from source
 
