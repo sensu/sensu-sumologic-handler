@@ -96,12 +96,11 @@ func TestExecuteHandler(t *testing.T) {
 	plugin.MetricDimensions = `hey=now,this=that`
 	plugin.MetricMetadata = `you=me,here=there`
 	plugin.LogFields = `near=far,in=out`
-	plugin.SourceName = `custom_source`
-	plugin.SourceHost = `custom_host`
-	plugin.SourceCategory = `custom_cat`
+	plugin.SourceNameTemplate = `{{ .Check.Name }}`
+	plugin.SourceHostTemplate = `custom_host`
+	plugin.SourceCategoryTemplate = `custom_cat`
 
 	event := corev2.FixtureEvent("entity1", "check1")
-	event.Check = nil
 	event.Metrics = corev2.FixtureMetrics()
 	msStamp := int64(1624376039373)
 	nsStamp := int64(1624376039373111122)

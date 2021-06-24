@@ -177,35 +177,14 @@ func checkArgs(event *types.Event) error {
 	if plugin.DryRun {
 		plugin.Verbose = true
 	}
-	if len(plugin.SourceHostTemplate) > 0 {
-		sourceHost, err := templates.EvalTemplate("source-host", plugin.SourceHostTemplate, event)
-		if err != nil {
-			return fmt.Errorf("%s: Error processing source host template: %s Err: %s",
-				plugin.PluginConfig.Name, plugin.SourceHostTemplate, err)
-		}
-		plugin.SourceHost = sourceHost
-	}
-	if len(plugin.SourceNameTemplate) > 0 {
-		sourceName, err := templates.EvalTemplate("source-name", plugin.SourceNameTemplate, event)
-		if err != nil {
-			return fmt.Errorf("%s: Error processing source name template: %s Err: %s",
-				plugin.PluginConfig.Name, plugin.SourceNameTemplate, err)
-		}
-		plugin.SourceName = sourceName
-	}
-	if len(plugin.SourceCategoryTemplate) > 0 {
-
-		sourceCategory, err := templates.EvalTemplate("source-category", plugin.SourceCategoryTemplate, event)
-		if err != nil {
-			return fmt.Errorf("%s: Error processing source category template: %s Err: %s",
-				plugin.PluginConfig.Name, plugin.SourceCategoryTemplate, err)
-		}
-		plugin.SourceCategory = sourceCategory
-	}
 	return nil
 }
 
 func executeHandler(event *types.Event) error {
+	err := renderTemplates(event)
+	if err != nil {
+		log.Printf("Error rendering templates: %s", err)
+	}
 
 	dataString, err := convertMetrics(event)
 	if err != nil {
@@ -242,6 +221,35 @@ func executeHandler(event *types.Event) error {
 		}
 	}
 
+	return nil
+}
+
+func renderTemplates(event *corev2.Event) error {
+	if len(plugin.SourceHostTemplate) > 0 {
+		sourceHost, err := templates.EvalTemplate("source-host", plugin.SourceHostTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source host template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceHostTemplate, err)
+		}
+		plugin.SourceHost = sourceHost
+	}
+	if len(plugin.SourceNameTemplate) > 0 {
+		sourceName, err := templates.EvalTemplate("source-name", plugin.SourceNameTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source name template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceNameTemplate, err)
+		}
+		plugin.SourceName = sourceName
+	}
+	if len(plugin.SourceCategoryTemplate) > 0 {
+
+		sourceCategory, err := templates.EvalTemplate("source-category", plugin.SourceCategoryTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source category template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceCategoryTemplate, err)
+		}
+		plugin.SourceCategory = sourceCategory
+	}
 	return nil
 }
 
