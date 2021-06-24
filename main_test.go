@@ -109,6 +109,7 @@ func TestExecuteHandler(t *testing.T) {
 		p.Timestamp = nsStamp
 	}
 	msgBytes, err := json.Marshal(event)
+	assert.NoError(t, err)
 	plugin.Format = "prometheus"
 	plugin.AlwaysSendLog = true
 	var test = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

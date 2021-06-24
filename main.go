@@ -288,6 +288,9 @@ func convertMetrics(event *corev2.Event) (string, error) {
 func sendMetrics(dataString string) error {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", plugin.Url, bytes.NewBufferString(dataString))
+	if err != nil {
+		return fmt.Errorf("New Http Request failed: %s", err)
+	}
 	req.Header.Add(`Content-Type`, "application/vnd.sumologic."+plugin.Format)
 	// Add optional headers here
 	if len(plugin.SourceHost) > 0 {
@@ -330,6 +333,9 @@ func sendMetrics(dataString string) error {
 func sendLog(dataString string) error {
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", plugin.Url, bytes.NewBufferString(dataString))
+	if err != nil {
+		return fmt.Errorf("New Http Request failed: %s", err)
+	}
 	// Add optional headers here
 	if len(plugin.SourceHost) > 0 {
 		req.Header.Add(`X-Sumo-Host`, plugin.SourceHost)
