@@ -96,9 +96,9 @@ func TestExecuteHandler(t *testing.T) {
 	plugin.MetricDimensions = `hey=now,this=that`
 	plugin.MetricMetadata = `you=me,here=there`
 	plugin.LogFields = `near=far,in=out`
-	plugin.SourceNameTemplate = `{{ .Check.Name }}`
-	plugin.SourceHostTemplate = `custom_host`
-	plugin.SourceCategoryTemplate = `custom_cat`
+	plugin.SourceNameTemplate = defaultNameTemplate
+	plugin.SourceHostTemplate = defaultHostTemplate
+	plugin.SourceCategoryTemplate = defaultCategoryTemplate
 
 	event := corev2.FixtureEvent("entity1", "check1")
 	event.Metrics = corev2.FixtureMetrics()
@@ -126,9 +126,21 @@ func TestExecuteHandler(t *testing.T) {
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
 			assert.Equal(t, plugin.LogFields, r.Header["X-Sumo-Fields"][0])
 		}
-		assert.Equal(t, plugin.SourceName, r.Header["X-Sumo-Name"][0])
-		assert.Equal(t, plugin.SourceHost, r.Header["X-Sumo-Host"][0])
-		assert.Equal(t, plugin.SourceCategory, r.Header["X-Sumo-Category"][0])
+		if len(plugin.SourceName) > 0 {
+			assert.Equal(t, plugin.SourceName, r.Header["X-Sumo-Name"][0])
+		} else {
+			assert.Nil(t, r.Header["X-Sumo-Name"])
+		}
+		if len(plugin.SourceHost) > 0 {
+			assert.Equal(t, plugin.SourceHost, r.Header["X-Sumo-Host"][0])
+		} else {
+			assert.Nil(t, r.Header["X-Sumo-Host"])
+		}
+		if len(plugin.SourceCategory) > 0 {
+			assert.Equal(t, plugin.SourceCategory, r.Header["X-Sumo-Category"][0])
+		} else {
+			assert.Nil(t, r.Header["X-Sumo-Category"])
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 
