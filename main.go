@@ -10,28 +10,38 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/sensu/sensu-go/types"
+	"github.com/sensu/sensu-plugin-sdk/sensu"
+	"github.com/sensu/sensu-plugin-sdk/templates"
 )
 
 // Config represents the handler plugin config.
 type Config struct {
 	sensu.PluginConfig
-	Url                string
-	Verbose            bool
-	DryRun             bool
-	AlwaysSendLog      bool
-	DisableSendLog     bool
-	DisableSendMetrics bool
-	Format             string
-	SourceName         string
-	SourceHost         string
-	SourceCategory     string
-	MetricDimensions   string
-	MetricMetadata     string
-	LogFields          string
+	Url                    string
+	Verbose                bool
+	DryRun                 bool
+	AlwaysSendLog          bool
+	DisableSendLog         bool
+	DisableSendMetrics     bool
+	Format                 string
+	SourceName             string
+	SourceNameTemplate     string
+	SourceHost             string
+	SourceHostTemplate     string
+	SourceCategory         string
+	SourceCategoryTemplate string
+	MetricDimensions       string
+	MetricMetadata         string
+	LogFields              string
 }
+
+const (
+	defaultHostTemplate     = "{{ .Entity.Name }}"
+	defaultNameTemplate     = "{{ .Check.Name }}"
+	defaultCategoryTemplate = ""
+)
 
 var (
 	plugin = Config{
@@ -105,25 +115,25 @@ var (
 			Path:     "source-name",
 			Env:      "SUMOLOGIC_SOURCE_NAME",
 			Argument: "source-name",
-			Default:  "",
-			Usage:    "Custom Sumologic source name",
-			Value:    &plugin.SourceName,
+			Default:  defaultNameTemplate,
+			Usage:    "Custom Sumologic source name (Note: Go templating aware string)",
+			Value:    &plugin.SourceNameTemplate,
 		},
 		&sensu.PluginConfigOption{
 			Path:     "source-host",
 			Env:      "SUMOLOGIC_SOURCE_HOST",
 			Argument: "source-host",
-			Default:  "",
-			Usage:    "Custom Sumologic source host",
-			Value:    &plugin.SourceHost,
+			Default:  defaultHostTemplate,
+			Usage:    "Custom Sumologic source host (Note: Go templating aware string)",
+			Value:    &plugin.SourceHostTemplate,
 		},
 		&sensu.PluginConfigOption{
 			Path:     "source-category",
 			Env:      "SUMOLOGIC_SOURCE_CATEGORY",
 			Argument: "source-category",
-			Default:  "",
-			Usage:    "Custom Sumologic source category",
-			Value:    &plugin.SourceCategory,
+			Default:  defaultCategoryTemplate,
+			Usage:    "Custom Sumologic source category (Note: Go templating aware string)",
+			Value:    &plugin.SourceCategoryTemplate,
 		},
 		&sensu.PluginConfigOption{
 			Path:     "metric-dimensions",
@@ -157,7 +167,7 @@ func main() {
 	handler.Execute()
 }
 
-func checkArgs(_ *types.Event) error {
+func checkArgs(event *types.Event) error {
 	if len(plugin.Url) == 0 {
 		return fmt.Errorf("--url or SUMOLOGIC_URL environment variable is required")
 	}
@@ -171,6 +181,10 @@ func checkArgs(_ *types.Event) error {
 }
 
 func executeHandler(event *types.Event) error {
+	err := renderTemplates(event)
+	if err != nil {
+		log.Printf("Error rendering templates: %s", err)
+	}
 
 	dataString, err := convertMetrics(event)
 	if err != nil {
@@ -207,6 +221,35 @@ func executeHandler(event *types.Event) error {
 		}
 	}
 
+	return nil
+}
+
+func renderTemplates(event *corev2.Event) error {
+	if len(plugin.SourceHostTemplate) > 0 {
+		sourceHost, err := templates.EvalTemplate("source-host", plugin.SourceHostTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source host template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceHostTemplate, err)
+		}
+		plugin.SourceHost = sourceHost
+	}
+	if len(plugin.SourceNameTemplate) > 0 {
+		sourceName, err := templates.EvalTemplate("source-name", plugin.SourceNameTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source name template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceNameTemplate, err)
+		}
+		plugin.SourceName = sourceName
+	}
+	if len(plugin.SourceCategoryTemplate) > 0 {
+
+		sourceCategory, err := templates.EvalTemplate("source-category", plugin.SourceCategoryTemplate, event)
+		if err != nil {
+			return fmt.Errorf("%s: Error processing source category template: %s Err: %s",
+				plugin.PluginConfig.Name, plugin.SourceCategoryTemplate, err)
+		}
+		plugin.SourceCategory = sourceCategory
+	}
 	return nil
 }
 
