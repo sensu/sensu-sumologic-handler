@@ -47,7 +47,7 @@ var (
 	plugin = Config{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-sumologic-handler",
-			Short:    "Send Sensu metrics into a hosted Sumologic HTTP collector",
+			Short:    "Send Sensu observability data (events and metrics) to a hosted Sumo Logic HTTP Logs and Metrics Source.",
 			Keyspace: "sensu.io/plugins/sumologic/config",
 		},
 	}
@@ -58,7 +58,7 @@ var (
 			Argument:  "url",
 			Shorthand: "u",
 			Default:   "",
-			Usage:     "Http collector url",
+			Usage:     "Sumo Logic HTTP Logs and Metrics Source URL",
 			Secret:    true,
 			Value:     &plugin.Url,
 		},
@@ -84,7 +84,7 @@ var (
 			Argument:  "dry-run",
 			Shorthand: "n",
 			Default:   false,
-			Usage:     "Dry-run, do not send data to Sumologic collector, report to stdout instead",
+			Usage:     "Dry-run, do not send data to Sumo Logic collector, report to stdout instead",
 			Value:     &plugin.DryRun,
 		},
 		&sensu.PluginConfigOption{
@@ -116,7 +116,7 @@ var (
 			Env:      "SUMOLOGIC_SOURCE_NAME",
 			Argument: "source-name",
 			Default:  defaultNameTemplate,
-			Usage:    "Custom Sumologic source name (Note: Go templating aware string)",
+			Usage:    "Custom Sumo Logic source name (supports handler templates)",
 			Value:    &plugin.SourceNameTemplate,
 		},
 		&sensu.PluginConfigOption{
@@ -124,7 +124,7 @@ var (
 			Env:      "SUMOLOGIC_SOURCE_HOST",
 			Argument: "source-host",
 			Default:  defaultHostTemplate,
-			Usage:    "Custom Sumologic source host (Note: Go templating aware string)",
+			Usage:    "Custom Sumo Logic source host (supports handler templates)",
 			Value:    &plugin.SourceHostTemplate,
 		},
 		&sensu.PluginConfigOption{
@@ -132,7 +132,7 @@ var (
 			Env:      "SUMOLOGIC_SOURCE_CATEGORY",
 			Argument: "source-category",
 			Default:  defaultCategoryTemplate,
-			Usage:    "Custom Sumologic source category (Note: Go templating aware string)",
+			Usage:    "Custom Sumo Logic source category (supports handler templates)",
 			Value:    &plugin.SourceCategoryTemplate,
 		},
 		&sensu.PluginConfigOption{
@@ -140,7 +140,7 @@ var (
 			Env:      "SUMOLOGIC_METRIC_DIMENSIONS",
 			Argument: "metric-dimensions",
 			Default:  "",
-			Usage:    "Custom Sumologic metric dimensions (comma separate key=value)",
+			Usage:    "Custom Sumo Logic metric dimensions (comma separated key=value pairs)",
 			Value:    &plugin.MetricDimensions,
 		},
 		&sensu.PluginConfigOption{
@@ -148,7 +148,7 @@ var (
 			Env:      "SUMOLOGIC_METRIC_METADATA",
 			Argument: "metric-metadata",
 			Default:  "",
-			Usage:    "Custom Sumologic metric metadata (comma separate key=value)",
+			Usage:    "Custom Sumo Logic metric metadata (comma separated key=value pairs)",
 			Value:    &plugin.MetricMetadata,
 		},
 		&sensu.PluginConfigOption{
@@ -156,7 +156,7 @@ var (
 			Env:      "SUMOLOGIC_LOG_FIELDS",
 			Argument: "log-fields",
 			Default:  "",
-			Usage:    "Custom Sumologic log fields (comma separate key=value)",
+			Usage:    "Custom Sumo Logic log fields (comma separated key=value pairs)",
 			Value:    &plugin.LogFields,
 		},
 	}
