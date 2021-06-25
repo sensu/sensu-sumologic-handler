@@ -37,20 +37,19 @@ Available Commands:
   version     Print the version number of this plugin
 
 Flags:
+  -u, --url string                 Sumo Logic HTTP Logs and Metrics Source URL (Required)
   -a, --always-send-log            Always send event as log, even if metrics are present
+  -m, --metrics-format string      Metrics format (only prometheus supported for now) (default "prometheus")
       --disable-send-log           Disable send event as log
       --disable-send-metrics       Disable send event metrics
-  -n, --dry-run                    Dry-run, do not send data to Sumo Logic collector, report to stdout instead
-  -h, --help                       help for sensu-sumologic-handler
       --log-fields string          Custom Sumo Logic log fields (comma separated key=value pairs)
       --metric-dimensions string   Custom Sumo Logic metric dimensions (comma separated key=value pairs)
-      --metric-metadata string     Custom Sumo Logic metric metadata (comma separated key=value pairs)
-  -m, --metrics-format string      Metrics format (only prometheus supported for now) (default "prometheus")
       --source-category string     Custom Sumo Logic source category (supports handler templates)
       --source-host string         Custom Sumo Logic source host (supports handler templates) (default "{{ .Entity.Name }}")
       --source-name string         Custom Sumo Logic source name (supports handler templates) (default "{{ .Check.Name }}")
-  -u, --url string                 Sumo Logic HTTP Logs and Metrics Source URL
+  -n, --dry-run                    Dry-run, do not send data to Sumo Logic collector, report to stdout instead
   -v, --verbose                    Verbose output to stdout
+  -h, --help                       help for sensu-sumologic-handler
 
 Use "sensu-sumologic-handler [command] --help" for more information about a command.
 ```
@@ -65,7 +64,6 @@ Use "sensu-sumologic-handler [command] --help" for more information about a comm
 |--source-host        |SUMOLOGIC_SOURCE_HOST        |
 |--source-category    |SUMOLOGIC_SOURCE_CATEGORY    |
 |--metric-dimensions  |SUMOLOGIC_METRIC_DIMENSIONS  |
-|--metric-metadata    |SUMOLOGIC_METRIC_METADATA    |
 |--log-fields         |SUMOLOGIC_LOG_FIELDS         |
 
 **Security Note:** Care should be taken to not expose the `--url` for this handler by specifying it on the command line or by directly setting the environment variable in the handler definition.
@@ -89,7 +87,7 @@ spec:
 All of the command line arguments referenced in the help usage message can be overridden by check or entity annotations.
 The annotation consists of the key formed by appending the "long" argument specification to the string `sensu.io/plugins/sumologic/config` (e.g. `sensu.io/plugins/sumologic/config/source-name`).
 
-For example, having the following in an `agent.yml` file will create an entity annotation such that Sensu metrics sent to SumoLogic from this entity will include additional metadata string `environment=production, entity=test` instead of the metadata string defined with the handler command flag.
+For example, having the following in an `agent.yml` file will create an entity annotation such that Sensu metrics sent to SumoLogic from this entity will include the additional metric-dimensions string `environment=production, entity=test` instead of the dimensions string defined with the handler command flag.
 
 ```yml
 namespace: "default"
@@ -98,7 +96,7 @@ subscriptions:
 backend-url:
   - "ws://127.0.0.1:8081"
 annotations:
-  sensu.io/plugins/sumologic/config/metric-metadata: "environment=production, entity=test"
+  sensu.io/plugins/sumologic/config/metric-dimensions: "environment=production, entity=test"
 ```
 
 ## Configuration

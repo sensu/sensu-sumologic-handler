@@ -58,7 +58,7 @@ var (
 			Argument:  "url",
 			Shorthand: "u",
 			Default:   "",
-			Usage:     "Sumo Logic HTTP Logs and Metrics Source URL",
+			Usage:     "Sumo Logic HTTP Logs and Metrics Source URL (Required)",
 			Secret:    true,
 			Value:     &plugin.Url,
 		},
@@ -143,6 +143,7 @@ var (
 			Usage:    "Custom Sumo Logic metric dimensions (comma separated key=value pairs)",
 			Value:    &plugin.MetricDimensions,
 		},
+		/* JDS: metric metadata is being deprecated in the sumo http source in favor of metric dimensions
 		&sensu.PluginConfigOption{
 			Path:     "metric-metadata",
 			Env:      "SUMOLOGIC_METRIC_METADATA",
@@ -151,6 +152,7 @@ var (
 			Usage:    "Custom Sumo Logic metric metadata (comma separated key=value pairs)",
 			Value:    &plugin.MetricMetadata,
 		},
+		*/
 		&sensu.PluginConfigOption{
 			Path:     "log-fields",
 			Env:      "SUMOLOGIC_LOG_FIELDS",
