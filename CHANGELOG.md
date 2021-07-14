@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Fixed
+- Fix crash for golang Event object with nil Metrics
+
 ## [0.1.0] - 2021-06-25
 
 ### Added
