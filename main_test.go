@@ -43,6 +43,52 @@ func TestConvertMetric(t *testing.T) {
 		assert.NotEqual(t, sTime, dataString)
 	}
 }
+func TestConvertMetricWithNilTags(t *testing.T) {
+	nsStamp := int64(1624376039373111122)
+	usStamp := int64(1624376039373111)
+	msStamp := int64(1624376039373)
+	sStamp := int64(1624376039)
+	msSecond := int64(1624376039000)
+	a := [4]int64{msStamp, usStamp, nsStamp, sStamp}
+	event := corev2.FixtureEvent("entity1", "check1")
+	event.Check = nil
+	event.Metrics = corev2.FixtureMetrics()
+	for _, stamp := range a {
+		for _, p := range event.Metrics.Points {
+			p.Timestamp = stamp
+			p.Tags = nil
+		}
+		dataString, err := convertMetrics(event)
+		assert.NoError(t, err)
+		msTime := `answer{} 42 ` + fmt.Sprintf("%v\n", msStamp)
+		if stamp < msStamp {
+			msTime = `answer{} 42 ` + fmt.Sprintf("%v\n", msSecond)
+		}
+		usTime := `answer{} 42 ` + fmt.Sprintf("%v\n", usStamp)
+		nsTime := `answer{} 42 ` + fmt.Sprintf("%v\n", nsStamp)
+		sTime := `answer{} 42 ` + fmt.Sprintf("%v\n", sStamp)
+		assert.Equal(t, msTime, dataString)
+		assert.NotEqual(t, usTime, dataString)
+		assert.NotEqual(t, nsTime, dataString)
+		assert.NotEqual(t, sTime, dataString)
+	}
+}
+
+func TestConvertMetricWithNilMetrics(t *testing.T) {
+	event := corev2.FixtureEvent("entity1", "check1")
+	event.Check = nil
+	event.Metrics = nil
+	_, err := convertMetrics(event)
+	assert.NoError(t, err)
+}
+func TestConvertMetricWithNilMetricsPoints(t *testing.T) {
+	event := corev2.FixtureEvent("entity1", "check1")
+	event.Check = nil
+	event.Metrics = corev2.FixtureMetrics()
+	event.Metrics.Points = nil
+	_, err := convertMetrics(event)
+	assert.NoError(t, err)
+}
 
 func TestSendMetrics(t *testing.T) {
 	event := corev2.FixtureEvent("entity1", "check1")
