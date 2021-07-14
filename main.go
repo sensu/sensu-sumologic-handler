@@ -257,32 +257,34 @@ func renderTemplates(event *corev2.Event) error {
 
 func convertMetrics(event *corev2.Event) (string, error) {
 	output := ""
-	for _, point := range event.Metrics.Points {
-		tags := ""
-		for i, tag := range point.Tags {
-			if len(point.Tags)-1 == i {
-				tags = tags + fmt.Sprintf("%s=\"%v\"", tag.Name, tag.Value)
-			} else {
-				tags = tags + fmt.Sprintf("%s=\"%v\", ", tag.Name, tag.Value)
+	if event.Metrics != nil {
+		for _, point := range event.Metrics.Points {
+			tags := ""
+			for i, tag := range point.Tags {
+				if len(point.Tags)-1 == i {
+					tags = tags + fmt.Sprintf("%s=\"%v\"", tag.Name, tag.Value)
+				} else {
+					tags = tags + fmt.Sprintf("%s=\"%v\", ", tag.Name, tag.Value)
+				}
 			}
-		}
-		/* Auto detection of metric point timestamp precision using a heuristic with a 250-ish year cutoff */
-		timestamp := point.Timestamp
-		switch ts := math.Log10(float64(timestamp)); {
-		case ts < 10:
-			// assume timestamp is seconds convert to millisecond
-			timestamp = time.Unix(timestamp, 0).UnixNano() / int64(time.Millisecond)
-		case ts < 13:
-			// assume timestamp is milliseconds
-		case ts < 16:
-			// assume timestamp is microseconds
-			timestamp = (timestamp * 1000) / int64(time.Millisecond)
-		default:
-			// assume timestamp is nanoseconds
-			timestamp = timestamp / int64(time.Millisecond)
+			/* Auto detection of metric point timestamp precision using a heuristic with a 250-ish year cutoff */
+			timestamp := point.Timestamp
+			switch ts := math.Log10(float64(timestamp)); {
+			case ts < 10:
+				// assume timestamp is seconds convert to millisecond
+				timestamp = time.Unix(timestamp, 0).UnixNano() / int64(time.Millisecond)
+			case ts < 13:
+				// assume timestamp is milliseconds
+			case ts < 16:
+				// assume timestamp is microseconds
+				timestamp = (timestamp * 1000) / int64(time.Millisecond)
+			default:
+				// assume timestamp is nanoseconds
+				timestamp = timestamp / int64(time.Millisecond)
 
+			}
+			output += fmt.Sprintf("%s{%s} %v %v\n", point.Name, tags, point.Value, timestamp)
 		}
-		output += fmt.Sprintf("%s{%s} %v %v\n", point.Name, tags, point.Value, timestamp)
 	}
 	return output, nil
 }
