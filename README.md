@@ -39,7 +39,6 @@ Available Commands:
 Flags:
   -u, --url string                 Sumo Logic HTTP Logs and Metrics Source URL (Required)
   -a, --always-send-log            Always send event as log, even if metrics are present
-  -m, --metrics-format string      Metrics format (only prometheus supported for now) (default "prometheus")
       --disable-send-log           Disable send event as log
       --disable-send-metrics       Disable send event metrics
       --log-fields string          Custom Sumo Logic log fields (comma separated key=value pairs)
@@ -59,7 +58,6 @@ Use "sensu-sumologic-handler [command] --help" for more information about a comm
 |Argument             |Environment Variable         |
 |---------------------|-----------------------------|
 |--url                |SUMOLOGIC_URL                |
-|--metrics-format     |SUMOLOGIC_METRICS_FORMAT     |
 |--source-name        |SUMOLOGIC_SOURCE_NAME        |
 |--source-host        |SUMOLOGIC_SOURCE_HOST        |
 |--source-category    |SUMOLOGIC_SOURCE_CATEGORY    |

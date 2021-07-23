@@ -25,7 +25,6 @@ type Config struct {
 	AlwaysSendLog          bool
 	DisableSendLog         bool
 	DisableSendMetrics     bool
-	Format                 string
 	SourceName             string
 	SourceNameTemplate     string
 	SourceHost             string
@@ -61,15 +60,6 @@ var (
 			Usage:     "Sumo Logic HTTP Logs and Metrics Source URL (Required)",
 			Secret:    true,
 			Value:     &plugin.Url,
-		},
-		&sensu.PluginConfigOption{
-			Path:      "metrics-format",
-			Env:       "SUMOLOGIC_METRICS_FORMAT",
-			Argument:  "metrics-format",
-			Shorthand: "m",
-			Default:   "prometheus",
-			Usage:     "Metrics format (only prometheus supported for now)",
-			Value:     &plugin.Format,
 		},
 		&sensu.PluginConfigOption{
 			Path:      "verbose",
@@ -173,9 +163,6 @@ func checkArgs(event *types.Event) error {
 	if len(plugin.Url) == 0 {
 		return fmt.Errorf("--url or SUMOLOGIC_URL environment variable is required")
 	}
-	if plugin.Format != "prometheus" {
-		return fmt.Errorf("requested --metrics-format is not supported yet")
-	}
 	if plugin.DryRun {
 		plugin.Verbose = true
 	}
@@ -202,7 +189,7 @@ func executeHandler(event *types.Event) error {
 	}
 	if plugin.Verbose {
 		log.Printf("Metrics Output Format: %s Send Metrics: %v Send Log: %v",
-			plugin.Format, doMetrics, doLog)
+			`prometheus`, doMetrics, doLog)
 	}
 
 	if doMetrics {
@@ -295,7 +282,7 @@ func sendMetrics(dataString string) error {
 	if err != nil {
 		return fmt.Errorf("New Http Request failed: %s", err)
 	}
-	req.Header.Add(`Content-Type`, "application/vnd.sumologic."+plugin.Format)
+	req.Header.Add(`Content-Type`, "application/vnd.sumologic.prometheus")
 	// Add optional headers here
 	if len(plugin.SourceHost) > 0 {
 		req.Header.Add(`X-Sumo-Host`, plugin.SourceHost)

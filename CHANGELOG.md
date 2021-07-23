@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+- Remove metric format option, no need to support anything but prometheus
+
 ## [0.1.1] - 2021-07-14
 
 ### Fixed
