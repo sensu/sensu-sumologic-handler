@@ -200,10 +200,13 @@ func executeHandler(event *types.Event) error {
 	}
 
 	if doLog {
+		timestamp := msTimestamp(event.Timestamp)
+		event.Timestamp = timestamp
 		msgBytes, err := json.Marshal(event)
 		if err != nil {
 			return err
 		}
+
 		err = sendLog(string(msgBytes))
 		if err != nil {
 			return err
@@ -242,6 +245,27 @@ func renderTemplates(event *corev2.Event) error {
 	return nil
 }
 
+func msTimestamp(ts int64) int64 {
+	/* Auto detection of metric point timestamp precision using a heuristic with a 250-ish year cutoff */
+	timestamp := ts
+	switch ts := math.Log10(float64(timestamp)); {
+	case ts < 10:
+		// assume timestamp is seconds convert to millisecond
+		timestamp = time.Unix(timestamp, 0).UnixNano() / int64(time.Millisecond)
+	case ts < 13:
+		// assume timestamp is milliseconds
+	case ts < 16:
+		// assume timestamp is microseconds
+		timestamp = (timestamp * 1000) / int64(time.Millisecond)
+	default:
+		// assume timestamp is nanoseconds
+		timestamp = timestamp / int64(time.Millisecond)
+
+	}
+	return timestamp
+
+}
+
 func convertMetrics(event *corev2.Event) (string, error) {
 	output := ""
 	if event.Metrics != nil {
@@ -254,8 +278,7 @@ func convertMetrics(event *corev2.Event) (string, error) {
 					tags = tags + fmt.Sprintf("%s=\"%v\", ", tag.Name, tag.Value)
 				}
 			}
-			/* Auto detection of metric point timestamp precision using a heuristic with a 250-ish year cutoff */
-			timestamp := point.Timestamp
+			timestamp := msTimestamp(point.Timestamp)
 			switch ts := math.Log10(float64(timestamp)); {
 			case ts < 10:
 				// assume timestamp is seconds convert to millisecond
@@ -327,6 +350,7 @@ func sendLog(dataString string) error {
 	if err != nil {
 		return fmt.Errorf("New Http Request failed: %s", err)
 	}
+	req.Header.Add(`Content-Type`, "application/json")
 	// Add optional headers here
 	if len(plugin.SourceHost) > 0 {
 		req.Header.Add(`X-Sumo-Host`, plugin.SourceHost)

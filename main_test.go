@@ -14,6 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func TestConvertMetric(t *testing.T) {
 	nsStamp := int64(1624376039373111122)
 	usStamp := int64(1624376039373111)
@@ -154,24 +163,28 @@ func TestExecuteHandler(t *testing.T) {
 	for _, p := range event.Metrics.Points {
 		p.Timestamp = nsStamp
 	}
-	msgBytes, err := json.Marshal(event)
+	event.Timestamp = msTimestamp(event.Timestamp)
+	expectedBytes, err := json.Marshal(event)
 	assert.NoError(t, err)
-	plugin.Format = "prometheus"
 	plugin.AlwaysSendLog = true
 	var test = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		assert.NoError(t, err)
-		if len(r.Header["Content-Type"]) > 0 {
+		switch {
+		case contains(r.Header["Content-Type"], "application/vnd.sumologic.prometheus"):
 			// recieved metrics with Content-Type header set
 			expectedBody := msTime
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
 			assert.Equal(t, plugin.MetricDimensions, r.Header["X-Sumo-Dimensions"][0])
 			assert.Equal(t, plugin.MetricMetadata, r.Header["X-Sumo-Metadata"][0])
-		} else {
+		case contains(r.Header["Content-Type"], "application/json"):
 			// recieved log with Content-Type header unset
-			expectedBody := string(msgBytes)
+			expectedBody := string(expectedBytes)
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
 			assert.Equal(t, plugin.LogFields, r.Header["X-Sumo-Fields"][0])
+		default:
+			assert.FailNow(t, "No Content-Type Header")
+
 		}
 		if len(plugin.SourceNameTemplate) > 0 {
 			assert.Equal(t, plugin.SourceName, r.Header["X-Sumo-Name"][0])

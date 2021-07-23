@@ -9,6 +9,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - Remove metric format option, no need to support anything but prometheus
+- Modify sensu events passed as logs into http source  to use 13 digit millisecond accuracy timstamp meeting requirements for automatic timestamp field detection.
 
 ## [0.1.1] - 2021-07-14
 
