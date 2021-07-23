@@ -147,6 +147,20 @@ func TestSendLog(t *testing.T) {
 	assert.NoError(t, sendMetrics(string(msgBytes)))
 }
 
+func TestMsTimestamp(t *testing.T) {
+	event := corev2.FixtureEvent("entity1", "check1")
+	event.Metrics = corev2.FixtureMetrics()
+	msStamp := int64(1624376039373)
+	nsStamp := int64(1624376039373111122)
+	secStamp := int64(1624376039)
+	expectedStamp := msStamp
+	finalStamp := msTimestamp(nsStamp)
+	assert.Equal(t, expectedStamp, finalStamp)
+	expectedStamp = secStamp * 1000
+	finalStamp = msTimestamp(secStamp)
+	assert.Equal(t, expectedStamp, finalStamp)
+}
+
 func TestExecuteHandler(t *testing.T) {
 	plugin.MetricDimensions = `hey=now,this=that`
 	plugin.MetricMetadata = `you=me,here=there`
