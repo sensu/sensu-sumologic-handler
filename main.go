@@ -22,9 +22,8 @@ type Config struct {
 	Url                    string
 	Verbose                bool
 	DryRun                 bool
-	AlwaysSendLog          bool
-	DisableSendLog         bool
-	DisableSendMetrics     bool
+	EnableSendLog          bool
+	EnableSendMetrics      bool
 	SourceName             string
 	SourceNameTemplate     string
 	SourceHost             string
@@ -39,7 +38,7 @@ type Config struct {
 const (
 	defaultHostTemplate     = "{{ .Entity.Name }}"
 	defaultNameTemplate     = "{{ .Check.Name }}"
-	defaultCategoryTemplate = ""
+	defaultCategoryTemplate = "sensu-event"
 )
 
 var (
@@ -78,28 +77,22 @@ var (
 			Value:     &plugin.DryRun,
 		},
 		&sensu.PluginConfigOption{
-			Path:      "always-send-log",
-			Argument:  "always-send-log",
-			Shorthand: "a",
+			Path:      "send-log",
+			Env:       "SUMOLOGIC_SEND_LOG",
+			Argument:  "send-log",
+			Shorthand: "l",
 			Default:   false,
-			Usage:     "Always send event as log, even if metrics are present",
-			Value:     &plugin.AlwaysSendLog,
+			Usage:     "Send event as log",
+			Value:     &plugin.EnableSendLog,
 		},
 		&sensu.PluginConfigOption{
-			Path:      "disable-send-log",
-			Argument:  "disable-send-log",
-			Shorthand: "",
+			Path:      "send-metrics",
+			Env:       "SUMOLOGIC_SEND_METRICS",
+			Argument:  "send-metrics",
+			Shorthand: "m",
 			Default:   false,
-			Usage:     "Disable send event as log",
-			Value:     &plugin.DisableSendLog,
-		},
-		&sensu.PluginConfigOption{
-			Path:      "disable-send-metrics",
-			Argument:  "disable-send-metrics",
-			Shorthand: "",
-			Default:   false,
-			Usage:     "Disable send event metrics",
-			Value:     &plugin.DisableSendMetrics,
+			Usage:     "Send event metrics, if there are metrics attached to sensu event",
+			Value:     &plugin.EnableSendMetrics,
 		},
 		&sensu.PluginConfigOption{
 			Path:     "source-name",
@@ -160,6 +153,9 @@ func main() {
 }
 
 func checkArgs(event *types.Event) error {
+	if !plugin.EnableSendMetrics && !plugin.EnableSendLog {
+		return fmt.Errorf("Must have at least one of --send-log or --send-metrics")
+	}
 	if len(plugin.Url) == 0 {
 		return fmt.Errorf("--url or SUMOLOGIC_URL environment variable is required")
 	}
@@ -179,17 +175,19 @@ func executeHandler(event *types.Event) error {
 	if err != nil {
 		return err
 	}
-	doMetrics := len(dataString) > 0
-	if plugin.DisableSendMetrics {
-		doMetrics = false
+	doMetrics := false
+	if plugin.EnableSendMetrics && len(dataString) > 0 {
+		doMetrics = true
 	}
-	doLog := plugin.AlwaysSendLog || len(dataString) == 0
-	if plugin.DisableSendLog {
-		doLog = false
+	if plugin.Verbose && plugin.EnableSendMetrics && len(dataString) == 0 {
+		log.Printf("Warning: metrics sending enabled, but no metrics found in Sensu event")
 	}
+
+	doLog := plugin.EnableSendLog
+
 	if plugin.Verbose {
-		log.Printf("Metrics Output Format: %s Send Metrics: %v Send Log: %v",
-			`prometheus`, doMetrics, doLog)
+		log.Printf("Info: Sending Metrics: %v Sending Log: %v",
+			doMetrics, doLog)
 	}
 
 	if doMetrics {

@@ -180,7 +180,9 @@ func TestExecuteHandler(t *testing.T) {
 	event.Timestamp = msTimestamp(event.Timestamp)
 	expectedBytes, err := json.Marshal(event)
 	assert.NoError(t, err)
-	plugin.AlwaysSendLog = true
+	plugin.EnableSendLog = true
+	plugin.EnableSendMetrics = true
+	results := 0
 	var test = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		assert.NoError(t, err)
@@ -191,11 +193,13 @@ func TestExecuteHandler(t *testing.T) {
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
 			assert.Equal(t, plugin.MetricDimensions, r.Header["X-Sumo-Dimensions"][0])
 			assert.Equal(t, plugin.MetricMetadata, r.Header["X-Sumo-Metadata"][0])
+			results++
 		case contains(r.Header["Content-Type"], "application/json"):
 			// recieved log with Content-Type header unset
 			expectedBody := string(expectedBytes)
 			assert.Equal(t, expectedBody, strings.Trim(string(body), "\n"))
 			assert.Equal(t, plugin.LogFields, r.Header["X-Sumo-Fields"][0])
+			results++
 		default:
 			assert.FailNow(t, "No Content-Type Header")
 
@@ -222,5 +226,6 @@ func TestExecuteHandler(t *testing.T) {
 	assert.NoError(t, err)
 	plugin.Url = url.String()
 	err = executeHandler(event)
+	assert.Equal(t, results, 2)
 	assert.NoError(t, err)
 }

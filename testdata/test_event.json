@@ -1,10 +1,10 @@
 {
   "check": {
-    "command": "system-profile-linux",
+    "command": "test-check-command",
     "interval": 60,
     "publish": false,
     "metadata": {
-      "name": "system-profile",
+      "name": "test-check",
       "namespace": "default",
       "labels": {
         "sensu.io/managed_by": "sensuctl"
@@ -16,7 +16,7 @@
   },
   "entity": {
     "entity_class": "agent",
-    "subscriptions": [],
+    "subscriptions": ["test"],
     "last_seen": 1624068620,
     "deregister": true,
     "deregistration": {
@@ -35,7 +35,7 @@
       "secret"
     ],
     "metadata": {
-      "name": "custom_agent",
+      "name": "test_agent",
       "namespace": "default",
       "labels": {
         "what": "now"
