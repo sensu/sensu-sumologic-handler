@@ -21,7 +21,7 @@
 ## Overview
 
 The Sensu Sumo Logic Handler is a [Sensu Handler](https://docs.sensu.io/sensu-go/latest/reference/handlers/) that sends Sensu observability data (events and metrics) to a Sumo Logic [HTTP Logs and Metrics Source](https://help.sumologic.com/03Send-Data/Sources/02Sources-for-Hosted-Collectors/HTTP-Source).
-The Sensu Sumo Logic handler automatically analyzes incoming observability data to determine if a Sumo log or a metric should be created (see `--always-send-log`, `--disable-send-log`, and `--disable-send-metric` to customize this behavior).
+This handler will send the Sensu event as either a log entry, or as a set of metrics or both (see `--send-log`, `--send-metrics` to select the mode of operation).
 
 ## Usage
 
@@ -38,13 +38,11 @@ Available Commands:
 
 Flags:
   -u, --url string                 Sumo Logic HTTP Logs and Metrics Source URL (Required)
-  -a, --always-send-log            Always send event as log, even if metrics are present
-  -m, --metrics-format string      Metrics format (only prometheus supported for now) (default "prometheus")
-      --disable-send-log           Disable send event as log
-      --disable-send-metrics       Disable send event metrics
+  -l, --send-log                   Send event as log
+  -m, --send-metrics               Send event metrics, if there are metrics attached to sensu event
       --log-fields string          Custom Sumo Logic log fields (comma separated key=value pairs)
       --metric-dimensions string   Custom Sumo Logic metric dimensions (comma separated key=value pairs)
-      --source-category string     Custom Sumo Logic source category (supports handler templates)
+      --source-category string     Custom Sumo Logic source category (supports handler templates) (default "sensu-event")
       --source-host string         Custom Sumo Logic source host (supports handler templates) (default "{{ .Entity.Name }}")
       --source-name string         Custom Sumo Logic source name (supports handler templates) (default "{{ .Check.Name }}")
   -n, --dry-run                    Dry-run, do not send data to Sumo Logic collector, report to stdout instead
@@ -59,7 +57,8 @@ Use "sensu-sumologic-handler [command] --help" for more information about a comm
 |Argument             |Environment Variable         |
 |---------------------|-----------------------------|
 |--url                |SUMOLOGIC_URL                |
-|--metrics-format     |SUMOLOGIC_METRICS_FORMAT     |
+|--send-log           |SUMOLOGIC_SEND_LOG           |
+|--send-metrics       |SUMOLOGIC_SEND_METRICS       |
 |--source-name        |SUMOLOGIC_SOURCE_NAME        |
 |--source-host        |SUMOLOGIC_SOURCE_HOST        |
 |--source-category    |SUMOLOGIC_SOURCE_CATEGORY    |
@@ -123,7 +122,7 @@ metadata:
   name: sumologic
 spec:
   command: >-
-    sensu-sumologic-handler
+    sensu-sumologic-handler --send-log --send-metrics
     --source-host "{{ .Entity.Name }}"
     --source-name "{{ .Check.Name }}"
   type: pipe
@@ -141,7 +140,8 @@ spec:
   provider: env
   id: SUMOLOGIC_HTTP_COLLECTOR_URL
 ```
-
+**Note:**  This handler enabled both sending the Sensu event as a log and also sending metrics.
+  
 #### Proxy Support
 
 This handler supports the use of the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` (or the lowercase versions thereof).
