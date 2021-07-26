@@ -7,6 +7,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.2.0] - 2021-07-26
+
 ### Changed
 - Refactor log/metric mode selection using new set of cmdline options.
 - Remove metric format option, no need to support anything but prometheus
