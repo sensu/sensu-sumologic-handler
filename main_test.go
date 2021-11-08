@@ -28,6 +28,15 @@ func clearPlugin() {
 	plugin.DryRun = false
 }
 
+func TestLogMsgTimestampLocation(t *testing.T) {
+	event := corev2.FixtureEvent("entity1", "check1")
+	expectedTimestamp := msTimestamp(event.Timestamp)
+	logMsg, err := createLogMsg(event)
+	assert.NoError(t, err)
+	data := logMsg.Data[0].(map[string]int64)
+	assert.Equal(t, data["timestamp"], expectedTimestamp)
+}
+
 func TestCheckArgs(t *testing.T) {
 	err := checkArgs(nil)
 	assert.Error(t, err)
