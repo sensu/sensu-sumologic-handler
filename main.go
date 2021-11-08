@@ -203,7 +203,7 @@ func executeHandler(event *corev2.Event) error {
 		timestamp := msTimestamp(event.Timestamp)
 		logMsg := LogMsg{}
 		t := make(map[string]int64)
-		e := make(map[string]*types.Event)
+		e := make(map[string]*corev2.Event)
 		t["timestamp"] = timestamp
 		e["event"] = event
 		logMsg.Data = append(logMsg.Data, t)
