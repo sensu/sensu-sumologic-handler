@@ -249,7 +249,9 @@ func TestExecuteHandler(t *testing.T) {
 		p.Timestamp = nsStamp
 	}
 	event.Timestamp = msTimestamp(event.Timestamp)
-	expectedBytes, err := json.Marshal(event)
+	logMsg, err := createLogMsg(event)
+	assert.NoError(t, err)
+	expectedBytes, err := json.Marshal(logMsg)
 	assert.NoError(t, err)
 	plugin.EnableSendLog = true
 	plugin.EnableSendMetrics = true
