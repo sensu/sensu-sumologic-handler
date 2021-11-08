@@ -11,7 +11,6 @@ import (
 	"time"
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
-	"github.com/sensu/sensu-go/types"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-plugin-sdk/templates"
 )
@@ -152,7 +151,7 @@ func main() {
 	handler.Execute()
 }
 
-func checkArgs(event *types.Event) error {
+func checkArgs(event *corev2.Event) error {
 	if !plugin.EnableSendMetrics && !plugin.EnableSendLog {
 		return fmt.Errorf("Must have at least one of --send-log or --send-metrics")
 	}
@@ -165,7 +164,7 @@ func checkArgs(event *types.Event) error {
 	return nil
 }
 
-func executeHandler(event *types.Event) error {
+func executeHandler(event *corev2.Event) error {
 	err := renderTemplates(event)
 	if err != nil {
 		log.Printf("Error rendering templates: %s", err)
@@ -277,20 +276,6 @@ func convertMetrics(event *corev2.Event) (string, error) {
 				}
 			}
 			timestamp := msTimestamp(point.Timestamp)
-			switch ts := math.Log10(float64(timestamp)); {
-			case ts < 10:
-				// assume timestamp is seconds convert to millisecond
-				timestamp = time.Unix(timestamp, 0).UnixNano() / int64(time.Millisecond)
-			case ts < 13:
-				// assume timestamp is milliseconds
-			case ts < 16:
-				// assume timestamp is microseconds
-				timestamp = (timestamp * 1000) / int64(time.Millisecond)
-			default:
-				// assume timestamp is nanoseconds
-				timestamp = timestamp / int64(time.Millisecond)
-
-			}
 			output += fmt.Sprintf("%s{%s} %v %v\n", point.Name, tags, point.Value, timestamp)
 		}
 	}
