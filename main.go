@@ -33,6 +33,9 @@ type Config struct {
 	MetricMetadata         string
 	LogFields              string
 }
+type LogMsg struct {
+	Data []interface{} `json:"data"`
+}
 
 const (
 	defaultHostTemplate     = "{{ .Entity.Name }}"
@@ -197,9 +200,11 @@ func executeHandler(event *corev2.Event) error {
 	}
 
 	if doLog {
-		timestamp := msTimestamp(event.Timestamp)
-		event.Timestamp = timestamp
-		msgBytes, err := json.Marshal(event)
+		logMsg, err := createLogMsg(event)
+		if err != nil {
+			return err
+		}
+		msgBytes, err := json.Marshal(logMsg)
 		if err != nil {
 			return err
 		}
@@ -211,6 +216,19 @@ func executeHandler(event *corev2.Event) error {
 	}
 
 	return nil
+}
+
+func createLogMsg(event *corev2.Event) (LogMsg, error) {
+	timestamp := msTimestamp(event.Timestamp)
+	logMsg := LogMsg{}
+	t := make(map[string]int64)
+	e := make(map[string]*corev2.Event)
+	t["timestamp"] = timestamp
+	e["event"] = event
+	logMsg.Data = append(logMsg.Data, t)
+	logMsg.Data = append(logMsg.Data, e)
+	return logMsg, nil
+
 }
 
 func renderTemplates(event *corev2.Event) error {
