@@ -7,6 +7,11 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.3.0] - 2021-11-12
+
+### Breaking Change
+- Refactor sensu-event json log output to better match Sumologic http collector's automatic timestamp detection.
+
 ## [0.2.0] - 2021-07-26
 
 ### Changed
